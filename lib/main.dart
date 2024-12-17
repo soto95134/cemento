@@ -33,6 +33,7 @@ class HormigonCalculator extends StatefulWidget {
 }
 
 class _HormigonCalculatorState extends State<HormigonCalculator> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController altoController = TextEditingController();
   final TextEditingController anchoController = TextEditingController();
   final TextEditingController largoController = TextEditingController();
@@ -46,20 +47,15 @@ class _HormigonCalculatorState extends State<HormigonCalculator> {
     setState(() {
       if (unidadContenedor == "Kilogramos") {
         unidadContenedor = "Litros";
-        selectedUnidad = "Litros"; // Asegúrate de que el valor de selectedUnidad cambie
+        selectedUnidad =
+            "Litros"; // Asegúrate de que el valor de selectedUnidad cambie
       } else {
         unidadContenedor = "Kilogramos";
-        selectedUnidad = "Kilogramos"; // Y aquí también actualizas selectedUnidad
+        selectedUnidad =
+            "Kilogramos"; // Y aquí también actualizas selectedUnidad
       }
     });
   }
-
-
-  final Map<String, double> densidades = {
-    "gravilla": 1.6, // Ejemplo: 1.6 kg por litro
-    "arena": 1.5, // Ejemplo: 1.5 kg por litro
-    "agua": 1.0, // Ejemplo: 1 kg por litro
-  };
 
   final Map<String, Map<String, double>> tablaHormigon = {
     // Hormigones tipo G (No estructurales)
@@ -85,71 +81,99 @@ class _HormigonCalculatorState extends State<HormigonCalculator> {
     "H-40": {"cemento": 450, "gravilla": 1320, "arena": 980, "agua": 160},
 
     // Otros tipos de hormigón especializados
-    "HAC-30": {"cemento": 350, "gravilla": 1240, "arena": 930, "agua": 180}, // Hormigón autocompactante
-    "HAR-50": {"cemento": 500, "gravilla": 1400, "arena": 1000, "agua": 150}, // Hormigón de alta resistencia
-    "Permeable": {"cemento": 250, "gravilla": 1100, "arena": 400, "agua": 200}, // Hormigón permeable
-    "Celular": {"cemento": 200, "gravilla": 0, "arena": 500, "agua": 300}, // Hormigón celular (liviano)
+    "HAC-30": {
+      "cemento": 350,
+      "gravilla": 1240,
+      "arena": 930,
+      "agua": 180
+    }, // Hormigón autocompactante
+    "HAR-50": {
+      "cemento": 500,
+      "gravilla": 1400,
+      "arena": 1000,
+      "agua": 150
+    }, // Hormigón de alta resistencia
+    "Permeable": {
+      "cemento": 250,
+      "gravilla": 1100,
+      "arena": 400,
+      "agua": 200
+    }, // Hormigón permeable
+    "Celular": {
+      "cemento": 200,
+      "gravilla": 0,
+      "arena": 500,
+      "agua": 300
+    }, // Hormigón celular (liviano)
   };
 
   String resultado = '';
 
-  double obtenerFactorConversion(String material, String unidadSeleccionada, double cantidadContenedor) {
+  final Map<String, double> densidades = {
+    "gravilla": 1.6, // Ejemplo: 1.6 kg por litro
+    "arena": 1.5, // Ejemplo: 1.5 kg por litro
+    "agua": 1.0, // Ejemplo: 1 kg por litro
+  };
+
+  double obtenerFactorConversion(
+      String material, String unidadSeleccionada, double cantidadContenedor) {
     if (unidadSeleccionada == "Kilogramos") {
       // Para kilogramos, usamos la densidad del material
-      if (densidades.containsKey(material)) {
-        return densidades[material]!;  // Densidad en kg por litro
-      }
+      return cantidadContenedor; // Aquí simplemente utilizamos el valor del volumen
     } else if (unidadSeleccionada == "Litros") {
       // Para Litros, retornamos el volumen, que ya está en litros.
-      return cantidadContenedor; // Aquí simplemente utilizamos el valor del volumen
+      if (densidades.containsKey(material)) {
+        return densidades[material]! *
+            cantidadContenedor; // Densidad en kg por litro
+      }
     }
-    return 1;  // Valor por defecto si no se encuentra la unidad
+
+    return 1; // Valor por defecto si no se encuentra la unidad
   }
 
   void calcularMateriales() {
-    final double alto = double.tryParse(altoController.text) ?? 0;
-    final double ancho = double.tryParse(anchoController.text) ?? 0;
-    final double largo = double.tryParse(largoController.text) ?? 0;
-    final double pesoSaco = double.tryParse(pesoSacoController.text) ?? 0;
-    final double cantidadContenedor = double.tryParse(contenedorController.text) ?? 0;
+    if (_formKey.currentState?.validate() ?? false) {
+      final double alto = double.tryParse(altoController.text) ?? 0;
+      final double ancho = double.tryParse(anchoController.text) ?? 0;
+      final double largo = double.tryParse(largoController.text) ?? 0;
+      final double pesoSaco = double.tryParse(pesoSacoController.text) ?? 0;
+      final double cantidadContenedor =
+          double.tryParse(contenedorController.text) ?? 0;
 
-    // Asegurarse de que todos los valores sean mayores a 0
-    if (alto > 0 && ancho > 0 && largo > 0 && pesoSaco > 0 && cantidadContenedor > 0) {
       final double volumen = alto * ancho * largo;
 
       final Map<String, double>? proporciones = tablaHormigon[selectedHormigon];
       if (proporciones != null) {
-        final double sacosCemento = (proporciones["cemento"]! * volumen) / pesoSaco;
+        final double sacosCemento =
+            (proporciones["cemento"]! * volumen) / pesoSaco;
 
-        // Calcular los factores de conversión de materiales según la unidad seleccionada
-        double factorConversionGravilla = obtenerFactorConversion("gravilla", selectedUnidad, cantidadContenedor);
-        double factorConversionArena = obtenerFactorConversion("arena", selectedUnidad, cantidadContenedor);
-        double factorConversionAgua = obtenerFactorConversion("agua", selectedUnidad, cantidadContenedor);
-
-        // Cálculos de contenedores con el factor de conversión
-        final double contenedoresGravilla = (proporciones["gravilla"]! * volumen) / factorConversionGravilla;
-        final double contenedoresArena = (proporciones["arena"]! * volumen) / factorConversionArena;
-        final double contenedoresAgua = (proporciones["agua"]! * volumen) / factorConversionAgua;
+        // Conversión
+        final double contenedoresGravilla =
+            (proporciones["gravilla"]! * volumen) /
+                obtenerFactorConversion(
+                    "gravilla", selectedUnidad, cantidadContenedor);
+        final double contenedoresArena = (proporciones["arena"]! * volumen) /
+            obtenerFactorConversion(
+                "arena", selectedUnidad, cantidadContenedor);
+        final double contenedoresAgua = (proporciones["agua"]! * volumen) /
+            obtenerFactorConversion("agua", selectedUnidad, cantidadContenedor);
 
         setState(() {
           resultado = '''
-        Volumen: ${volumen.toStringAsFixed(2)} m³
-        Sacos de Cemento: ${sacosCemento.toStringAsFixed(1)}
-        Contenedores de Gravilla: ${contenedoresGravilla.toStringAsFixed(1)}
-        Contenedores de Arena: ${contenedoresArena.toStringAsFixed(1)}
-        Contenedores de Agua: ${contenedoresAgua.toStringAsFixed(1)}
-        ''';
+Volumen: ${volumen.toStringAsFixed(2)} m³
+Sacos de Cemento: ${sacosCemento.toStringAsFixed(1)}
+Contenedores de Gravilla: ${contenedoresGravilla.toStringAsFixed(1)}
+Contenedores de Arena: ${contenedoresArena.toStringAsFixed(1)}
+Contenedores de Agua: ${contenedoresAgua.toStringAsFixed(1)}
+''';
         });
       }
     } else {
       setState(() {
-        resultado = 'Por favor, ingrese valores válidos en todos los campos.';
+        resultado = 'Por favor, corrige los errores antes de calcular.';
       });
     }
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -167,45 +191,76 @@ class _HormigonCalculatorState extends State<HormigonCalculator> {
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Aquí se agregan los campos de entrada de alto, ancho, largo, etc.
-              ..._buildInputFields(), // Esto incluye todos los campos de entrada
-              // Selector de unidades con toggle
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Unidad de contenedor: $unidadContenedor',
-                    style: TextStyle(fontSize: 16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Aquí se agregan los campos de entrada de alto, ancho, largo, etc.
+                ..._buildInputFields(), // Esto incluye todos los campos de entrada
+                // Selector de unidades con toggle
+
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Selecciona el tipo de hormigón',
+                    border: OutlineInputBorder(),
                   ),
-                  ElevatedButton(
-                    onPressed: toggleUnidad,
-                    child: Text('Cambiar a ${unidadContenedor == "Kilogramos" ? "Litros" : "Kilogramos"}'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Botón para calcular
-              ElevatedButton.icon(
-                onPressed: calcularMateriales,
-                icon: const Icon(Icons.calculate),
-                label: const Text('Calcular'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  value: selectedHormigon,
+                  items: tablaHormigon.keys.map((String key) {
+                    return DropdownMenuItem<String>(
+                      value: key,
+                      child: Text(key),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedHormigon = newValue!;
+                    });
+                  },
                 ),
-              ),
-              // Mostrar el resultado aquí
-              if (resultado.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: Text(
-                    resultado,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Unidad de contenedor: $unidadContenedor',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    ElevatedButton(
+                      onPressed: toggleUnidad,
+                      child: Text(
+                          'Cambiar a ${unidadContenedor == "Kilogramos" ? "Litros" : "Kilogramos"}'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Botón para calcular
+                ElevatedButton.icon(
+                  onPressed: calcularMateriales,
+                  icon: const Icon(Icons.calculate),
+                  label: const Text('Calcular'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
-            ],
+                // Mostrar el resultado aquí
+                if (resultado.isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.only(top: 20),
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        resultado,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -214,24 +269,24 @@ class _HormigonCalculatorState extends State<HormigonCalculator> {
 
   List<Widget> _buildInputFields() {
     return [
-      _buildTextField(altoController, 'Alto (m)', Icons.height),
-      _buildTextField(anchoController, 'Ancho (m)', Icons.straighten),
-      _buildTextField(largoController, 'Largo (m)', Icons.square_foot),
-      _buildTextField(
-          pesoSacoController, 'Peso del saco de cemento (kg)', Icons.shopping_bag),
-      _buildTextField(
-          contenedorController, 'Capacidad del contenedor', Icons.format_paint,),
+      _buildTextFormField(altoController, 'Alto (m)', Icons.height),
+      _buildTextFormField(anchoController, 'Ancho (m)', Icons.straighten),
+      _buildTextFormField(largoController, 'Largo (m)', Icons.square_foot),
+      _buildTextFormField(pesoSacoController, 'Peso del saco de cemento (kg)',
+          Icons.shopping_bag),
+      _buildTextFormField(
+          contenedorController, 'Capacidad del contenedor', Icons.format_paint),
     ];
   }
 
-  Widget _buildTextField(
+  Widget _buildTextFormField(
       TextEditingController controller, String label, IconData icon) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: TextField(
+        child: TextFormField(
           controller: controller,
           decoration: InputDecoration(
             labelText: label,
@@ -239,6 +294,16 @@ class _HormigonCalculatorState extends State<HormigonCalculator> {
             border: const OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Por favor ingresa un valor.';
+            }
+            if (double.tryParse(value) == null ||
+                double.tryParse(value)! <= 0) {
+              return 'Ingresa un valor válido.';
+            }
+            return null;
+          },
         ),
       ),
     );
